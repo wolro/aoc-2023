@@ -10,7 +10,7 @@ open System.IO
 
 type DiceNr = { R: int; G: int; B: int }
 
-type SubGame = { R: int32; B: int32; G: int32 }
+type SubGame = { R: int32; G: int32; B: int32 }
 
 type Game = { ID: int32; SubGames: List<SubGame> }
 
@@ -68,6 +68,16 @@ let possibleGames (dices: DiceNr) (games: seq<Game>) =
 let possibleSum (dices: DiceNr) (games: seq<Game>) =
     games |> possibleGames (dices) |> Seq.map (fun ele -> fst ele) |> Seq.sum
 
+// ------------------------------------- Solution, part 2
+let dicePower (games: seq<Game>) =
+    games
+    |> Seq.map (fun game ->
+        game.SubGames
+        |> List.map (fun subgame -> [ subgame.R; subgame.G; subgame.B ])
+        |> List.transpose
+        |> List.map List.max
+        |> List.fold (*) 1)
+    |> Seq.sum
 
 // ------------------------------------- Main script
 
@@ -79,7 +89,12 @@ let input = @".\input.txt"
 let games_test1 = gamesParsed (readInput inputTest1)
 let games = gamesParsed (readInput input)
 
+
+printfn "Part 1 ---------------------------------------------------------- "
 printfn "Possible games (test input):"
 possibleGames dices games_test1 |> Seq.iter (printfn "%A")
 printfn "\nSum of IDs for possible games (test input): %A" (possibleSum dices games_test1)
-printfn "\nSum of IDs for possible games (input): %A" (possibleSum dices games)
+printfn "Sum of IDs for possible games (input): %A" (possibleSum dices games)
+printfn "\nPart 2---------------------------------------------------------- "
+printfn "\nDice power (test input): %A" (dicePower games_test1)
+printfn "\nDice power (input): %A" (dicePower games)

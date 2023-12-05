@@ -1,2 +1,5 @@
 # Advent of Code input files
 input.txt
+
+# IDE remnants
+.vscode/
