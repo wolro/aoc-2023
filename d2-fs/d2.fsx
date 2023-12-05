@@ -10,17 +10,7 @@ open System.IO
 
 type DiceNr = { R: int; G: int; B: int }
 
-type SubGame =
-    { R: int32
-      B: int32
-      G: int32 }
-
-    // Operator overload for "+" comes in handy
-    static member (+)(g1: SubGame, g2: SubGame) =
-        { R = g1.R + g2.R
-          B = g1.B + g2.B
-          G = g1.G + g2.G }
-
+type SubGame = { R: int32; B: int32; G: int32 }
 
 type Game = { ID: int32; SubGames: List<SubGame> }
 
@@ -70,8 +60,8 @@ let possibleGames (dices: DiceNr) (games: seq<Game>) =
     |> Seq.map (fun game ->
         (game.ID,
          game.SubGames
-         |> List.reduce (+)
-         |> (fun subgame -> subgame.R <= dices.R && subgame.G <= dices.G && subgame.B <= dices.B)))
+         |> List.map (fun subgame -> subgame.R <= dices.R && subgame.G <= dices.G && subgame.B <= dices.B)
+         |> List.reduce (&&)))
     |> Seq.map (fun diceSum -> fst diceSum, snd diceSum) // retrieve indices
     |> Seq.filter (fun posGames -> snd posGames) // only keep impossible games (for review)
 
@@ -92,5 +82,4 @@ let games = gamesParsed (readInput input)
 printfn "Possible games (test input):"
 possibleGames dices games_test1 |> Seq.iter (printfn "%A")
 printfn "\nSum of IDs for possible games (test input): %A" (possibleSum dices games_test1)
-possibleGames dices games |> Seq.iter (printfn "%A")
 printfn "\nSum of IDs for possible games (input): %A" (possibleSum dices games)
