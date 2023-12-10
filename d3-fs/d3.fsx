@@ -7,7 +7,7 @@
 open System.IO
 
 // ------------------------------------- Types
-type partNum = { value: int; x: int; y: int }
+type partNum = { value: string; x: int; y: int }
 
 // ------------------------------------- IO
 
@@ -22,10 +22,83 @@ let readInput path =
 // ------------------------------------- Helper functions
 let filterNumbers (entry: string) = String.filter System.Char.IsDigit entry
 
+let retrieveNums (inputLine: int * string) =
+    let lineIdx, inputStr = inputLine
+
+    let nums =
+        inputStr.Split('.')
+        |> Seq.map (filterNumbers)
+        |> Seq.filter (fun ele -> not (System.String.IsNullOrEmpty ele))
+
+    let idcs = nums |> Seq.map (fun num -> inputStr.IndexOf(num))
+    let lineIdcs = Seq.init (Seq.length idcs) (fun _ -> lineIdx)
+
+    Seq.zip3 lineIdcs idcs nums
+
+
+let buildPartNum (numEntry: int * int * string) =
+    let lineNr, idx, numVal = numEntry
+
+    { partNum.value = numVal
+      x = idx
+      y = lineNr }
+
 
 // ------------------------------------- Parsing input into types
 
 // ------------------------------------- Solution, part 1
+
+let symMask (schematicRaw: seq<string>) =
+    schematicRaw
+    |> Seq.map (
+        Seq.map (fun ele ->
+            if not (System.Char.IsDigit ele || ele = '.') then
+                true
+            else
+                false)
+    )
+    |> array2D
+
+let symThere (symbols: bool[,]) (partCandidate: partNum) =
+
+    let lenX, lenY = (Array2D.length1 symbols, Array2D.length2 symbols)
+
+    partCandidate.value
+    |> Seq.mapi (fun idx _val ->
+        let x = partCandidate.x
+        let y = partCandidate.y
+
+        (if y > 0 && x > 0 then
+             symbols.[y - 1, x - 1 + idx]
+         else
+             false
+         || if y > 0 && (x + idx) <= lenX then
+                symbols.[y - 1, x + idx]
+            else
+                false
+         || if y > 0 && (x + 1 + idx) <= lenX then
+                symbols.[y - 1, x + 1 + idx]
+            else
+                false
+         || if (y + 1) <= lenY && x > 0 then
+                symbols.[y + 1, x - 1 + idx]
+            else
+                false
+         || if (y + 1) <= lenY && (x + idx) <= lenX then
+                symbols.[y + 1, x + idx]
+            else
+                false
+         || if (y + 1) <= lenY && (x + 1 + idx) <= lenX then
+                symbols.[y + 1, x + 1 + idx]
+            else
+                false
+         || if x > 0 then symbols.[y, x - 1 + idx] else false
+         || if (x + 1 + idx) <= lenX then
+                symbols.[y, x + 1 + idx]
+            else
+                false))
+    |> Seq.fold (||) false
+
 // Basic idea:
 // Parse into 2d char array (symbols get letters)
 // Build mask of symbols and numbers
@@ -50,26 +123,27 @@ let numsOnly =
     |> Seq.map (System.String)
     |> Seq.map (fun ele -> ele.Split('.'))
 
-let symMask =
+let partNums =
     schematicRaw
-    |> Seq.map (
-        Seq.map (fun ele ->
-            if not (System.Char.IsDigit ele || ele = '.') then
-                true
-            else
-                false)
-    )
-    |> array2D
+    |> Seq.mapi (fun idcs ele -> retrieveNums (idcs, ele) |> Seq.map (buildPartNum))
+    |> Seq.collect id
 
-// let partNums =
-//     schematicRaw
-//     |> Seq.map (fun ele -> [ for ch in ele -> ch ])
-//     |> Seq.iter (List.find (fun ch -> System.Char.IsDigit ch))
 
-printfn "%A" numsOnly
-// printfn "%A" numMask[0, 3]
-// printfn "%A" numMask[0, 5]
+let symbols = symMask schematicRaw
 
-printfn "Part 1 ---------------------------------------------------------- "
+let validMask = partNums |> Seq.map (symThere symbols)
 
-printfn "\nPart 2---------------------------------------------------------- "
+let validNums =
+    Seq.zip partNums validMask
+    |> Seq.filter (fun ele -> (snd ele))
+    |> Seq.map (fun ele -> (fst ele).value)
+    |> Seq.map (System.Int32.Parse)
+
+// let result = Seq.sum validNums
+
+validNums |> Seq.iter (printfn "%A")
+// printfn "%A" result
+
+// printfn "Part 1 ---------------------------------------------------------- "
+
+// printfn "\nPart 2---------------------------------------------------------- "
