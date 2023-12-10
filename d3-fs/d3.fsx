@@ -22,11 +22,16 @@ let readInput path =
 // ------------------------------------- Helper functions
 let filterNumbers (entry: string) = String.filter System.Char.IsDigit entry
 
+let filterNonNumbers (entry: string) =
+    entry |> String.filter (System.Char.IsDigit >> not)
+
 let retrieveNums (inputLine: int * string) =
     let lineIdx, inputStr = inputLine
 
+    let nonNumbers = filterNonNumbers inputStr |> Set.ofSeq |> Set.toArray
+
     let nums =
-        inputStr.Split('.')
+        inputStr.Split(nonNumbers)
         |> Seq.map (filterNumbers)
         |> Seq.filter (fun ele -> not (System.String.IsNullOrEmpty ele))
 
@@ -44,8 +49,6 @@ let buildPartNum (numEntry: int * int * string) =
       y = lineNr }
 
 
-// ------------------------------------- Parsing input into types
-
 // ------------------------------------- Solution, part 1
 
 let symMask (schematicRaw: seq<string>) =
@@ -59,69 +62,69 @@ let symMask (schematicRaw: seq<string>) =
     )
     |> array2D
 
-let symThere (symbols: bool[,]) (partCandidate: partNum) =
 
-    let lenX, lenY = (Array2D.length1 symbols, Array2D.length2 symbols)
+let symNeighbour (symbols: bool[,]) (partCandidate: partNum) =
+
+    let lenY, lenX = (Array2D.length1 symbols, Array2D.length2 symbols)
+
 
     partCandidate.value
     |> Seq.mapi (fun idx _val ->
         let x = partCandidate.x
         let y = partCandidate.y
 
-        (if y > 0 && x > 0 then
-             symbols.[y - 1, x - 1 + idx]
-         else
-             false
-         || if y > 0 && (x + idx) <= lenX then
-                symbols.[y - 1, x + idx]
-            else
-                false
-         || if y > 0 && (x + 1 + idx) <= lenX then
-                symbols.[y - 1, x + 1 + idx]
-            else
-                false
-         || if (y + 1) <= lenY && x > 0 then
-                symbols.[y + 1, x - 1 + idx]
-            else
-                false
-         || if (y + 1) <= lenY && (x + idx) <= lenX then
-                symbols.[y + 1, x + idx]
-            else
-                false
-         || if (y + 1) <= lenY && (x + 1 + idx) <= lenX then
-                symbols.[y + 1, x + 1 + idx]
-            else
-                false
-         || if x > 0 then symbols.[y, x - 1 + idx] else false
-         || if (x + 1 + idx) <= lenX then
-                symbols.[y, x + 1 + idx]
-            else
-                false))
+        let checkedCoords =
+            [ [ y - 1; x - 1 + idx ]
+              [ y - 1; x + idx ]
+              [ y - 1; x + 1 + idx ]
+              [ y + 1; x - 1 + idx ]
+              [ y + 1; x + idx ]
+              [ y + 1; x + 1 + idx ]
+              [ y; x - 1 + idx ]
+              [ y; x + 1 + idx ] ]
+
+        let relevantCoords =
+            checkedCoords
+            |> List.filter (fun ele -> (ele.[0] >= 0 && ele.[0] < lenY && ele.[1] >= 0 && ele.[1] < lenX))
+
+        // printfn "%A" checkedCoords
+        // printfn "%A" relevantCoords
+
+        relevantCoords
+        |> List.map (fun ele -> symbols.[ele.[0], ele.[1]])
+        |> List.fold (||) false)
+
     |> Seq.fold (||) false
 
-// Basic idea:
-// Parse into 2d char array (symbols get letters)
-// Build mask of symbols and numbers
-// Write symbol coordinates into an array
-// For this array, check number mask for neighbor coordinates indicates a number.
-//      If yes, "get this number" (need to figure out that part) , and add them to the sum.
-
-
 // ------------------------------------- Solution, part 2
+
+let p1Result (schematicRaw: seq<string>) =
+    let partNums =
+        schematicRaw
+        |> Seq.mapi (fun idcs ele -> retrieveNums (idcs, ele) |> Seq.map (buildPartNum))
+        |> Seq.collect id
+
+    let isValidPartNum = partNums |> Seq.map (symNeighbour (symMask schematicRaw))
+
+    Seq.zip partNums isValidPartNum
+    |> Seq.filter (fun ele -> (snd ele))
+    |> Seq.map (fun ele -> (fst ele).value)
+    |> Seq.map (System.Int32.Parse)
+    |> Seq.sum
 
 // ------------------------------------- Main script
 
 let inputTest1 = @".\input_test1.txt"
+let inputTestExt = @".\input_test_ext1.txt"
 let input = @".\input.txt"
 
-let schematicRaw = readInput inputTest1
+printfn "Part 1 ---------------------------------------------------------- "
+printfn "Sum of valid part numbers (Test input): %A" (readInput inputTest1 |> p1Result)
+printfn "Sum of valid part numbers (External test input): %A" (readInput inputTestExt |> p1Result)
+printfn "Sum of valid part numbers (Input): %A" (readInput input |> p1Result)
 
-let numsOnly =
-    schematicRaw
-    |> Seq.map (Seq.map (fun ele -> if System.Char.IsDigit ele then ele else '.'))
-    |> Seq.map (Seq.toArray)
-    |> Seq.map (System.String)
-    |> Seq.map (fun ele -> ele.Split('.'))
+
+let schematicRaw = readInput input
 
 let partNums =
     schematicRaw
@@ -129,21 +132,36 @@ let partNums =
     |> Seq.collect id
 
 
-let symbols = symMask schematicRaw
+// partNums |> Seq.iter (printfn "%A")
 
-let validMask = partNums |> Seq.map (symThere symbols)
+let isValidPartNum = partNums |> Seq.map (symNeighbour (symMask schematicRaw))
 
-let validNums =
-    Seq.zip partNums validMask
+let validPartNums =
+    Seq.zip partNums isValidPartNum
     |> Seq.filter (fun ele -> (snd ele))
     |> Seq.map (fun ele -> (fst ele).value)
     |> Seq.map (System.Int32.Parse)
 
-// let result = Seq.sum validNums
+let wr = new System.IO.StreamWriter("wrongnum.csv")
 
-validNums |> Seq.iter (printfn "%A")
-// printfn "%A" result
+Seq.zip partNums isValidPartNum
+|> Seq.filter (fun ele -> (snd ele))
+|> Seq.map (fun ele -> (fst ele).value)
+|> String.concat (",")
+|> wr.Write
 
-// printfn "Part 1 ---------------------------------------------------------- "
+wr.Close()
+
+// isValidPartNum |> Seq.iter (printfn "%A")
+
+// printfn "%A" (symMask schematicRaw)
+
+// (Seq.take 100 validPartNums) |> Seq.iter (printfn "%A")
 
 // printfn "\nPart 2---------------------------------------------------------- "
+// let numsOnly =
+//     schematicRaw
+//     |> Seq.map (Seq.map (fun ele -> if System.Char.IsDigit ele then ele else '.'))
+//     |> Seq.map (Seq.toArray)
+//     |> Seq.map (System.String)
+//     |> Seq.map (fun ele -> ele.Split('.'))
