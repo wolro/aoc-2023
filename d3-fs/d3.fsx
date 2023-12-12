@@ -25,6 +25,27 @@ let filterNumbers (entry: string) = String.filter System.Char.IsDigit entry
 let filterNonNumbers (entry: string) =
     entry |> String.filter (System.Char.IsDigit >> not)
 
+
+let findNumCoord (inputStr: string) (num: string) =
+    let rec findIndices (acc: int list) (startIndex: int) : int list =
+        match inputStr.IndexOf(num, startIndex) with
+        | -1 -> List.rev acc
+        | index ->
+            let newAcc = index :: acc
+            findIndices newAcc (index + 1)
+
+    let idcs = findIndices [] 0
+
+    idcs
+    |> List.filter (fun idx ->
+        if idx = 0 then
+            System.Char.IsDigit inputStr[idx + num.Length]
+        else
+            match (System.Char.IsDigit inputStr[idx - 1], System.Char.IsDigit inputStr[idx + num.Length]) with
+            | _, true -> false
+            | true, _ -> false
+            | false, false -> true)
+
 let retrieveNums (inputLine: int * string) =
     let lineIdx, inputStr = inputLine
 
@@ -35,18 +56,22 @@ let retrieveNums (inputLine: int * string) =
         |> Seq.map (filterNumbers)
         |> Seq.filter (fun ele -> not (System.String.IsNullOrEmpty ele))
 
-    let idcs = nums |> Seq.map (fun num -> inputStr.IndexOf(num))
+    let idcs = nums |> Seq.map (findNumCoord inputStr)
+
     let lineIdcs = Seq.init (Seq.length idcs) (fun _ -> lineIdx)
 
     Seq.zip3 lineIdcs idcs nums
 
 
-let buildPartNum (numEntry: int * int * string) =
-    let lineNr, idx, numVal = numEntry
+let buildPartNum (numEntry: int * list<int> * string) =
+    let lineNr, idcs, numVal = numEntry
 
-    { partNum.value = numVal
-      x = idx
-      y = lineNr }
+    idcs
+    |> List.map (fun idx ->
+        { partNum.value = numVal
+          x = idx
+          y = lineNr })
+    |> Seq.ofList
 
 
 // ------------------------------------- Solution, part 1
@@ -87,6 +112,13 @@ let symNeighbour (symbols: bool[,]) (partCandidate: partNum) =
             checkedCoords
             |> List.filter (fun ele -> (ele.[0] >= 0 && ele.[0] < lenY && ele.[1] >= 0 && ele.[1] < lenX))
 
+        if partCandidate.value = "98" then
+            // checkedCoords |> Seq.iter (printfn "%A")
+            // printfn ""
+            printfn "%A" partCandidate
+            relevantCoords |> Seq.iter (printfn "%A")
+            printfn ""
+
         // printfn "%A" checkedCoords
         // printfn "%A" relevantCoords
 
@@ -103,6 +135,7 @@ let p1Result (schematicRaw: seq<string>) =
         schematicRaw
         |> Seq.mapi (fun idcs ele -> retrieveNums (idcs, ele) |> Seq.map (buildPartNum))
         |> Seq.collect id
+        |> Seq.collect id
 
     let isValidPartNum = partNums |> Seq.map (symNeighbour (symMask schematicRaw))
 
@@ -118,39 +151,40 @@ let inputTest1 = @".\input_test1.txt"
 let inputTestExt = @".\input_test_ext1.txt"
 let input = @".\input.txt"
 
-printfn "Part 1 ---------------------------------------------------------- "
-printfn "Sum of valid part numbers (Test input): %A" (readInput inputTest1 |> p1Result)
-printfn "Sum of valid part numbers (External test input): %A" (readInput inputTestExt |> p1Result)
+// printfn "Part 1 ---------------------------------------------------------- "
+// printfn "Sum of valid part numbers (Test input): %A" (readInput inputTest1 |> p1Result)
+// printfn "Sum of valid part numbers (External test input): %A" (readInput inputTestExt |> p1Result)
 printfn "Sum of valid part numbers (Input): %A" (readInput input |> p1Result)
 
 
 let schematicRaw = readInput input
 
-let partNums =
-    schematicRaw
-    |> Seq.mapi (fun idcs ele -> retrieveNums (idcs, ele) |> Seq.map (buildPartNum))
-    |> Seq.collect id
+// let partNums =
+//     schematicRaw
+//     |> Seq.mapi (fun idcs ele -> retrieveNums (idcs, ele) |> Seq.map (buildPartNum))
+//     |> Seq.collect id
 
 
-// partNums |> Seq.iter (printfn "%A")
+// // partNums |> Seq.iter (printfn "%A")
 
-let isValidPartNum = partNums |> Seq.map (symNeighbour (symMask schematicRaw))
+// let isValidPartNum = partNums |> Seq.map (symNeighbour (symMask schematicRaw))
 
-let validPartNums =
-    Seq.zip partNums isValidPartNum
-    |> Seq.filter (fun ele -> (snd ele))
-    |> Seq.map (fun ele -> (fst ele).value)
-    |> Seq.map (System.Int32.Parse)
+// let validPartNums =
+//     Seq.zip partNums isValidPartNum
+//     |> Seq.filter (fun ele -> (snd ele))
+//     |> Seq.map (fun ele -> (fst ele).value)
+//     |> Seq.map (System.Int32.Parse)
 
-let wr = new System.IO.StreamWriter("wrongnum.csv")
+// let wr = new System.IO.StreamWriter("wrongnum.csv")
 
-Seq.zip partNums isValidPartNum
-|> Seq.filter (fun ele -> (snd ele))
-|> Seq.map (fun ele -> (fst ele).value)
-|> String.concat (",")
-|> wr.Write
 
-wr.Close()
+// Seq.zip partNums isValidPartNum
+// |> Seq.filter (fun ele -> (snd ele))
+// |> Seq.map (fun ele -> (fst ele).value)
+// |> String.concat (",")
+// |> wr.Write
+
+// wr.Close()
 
 // isValidPartNum |> Seq.iter (printfn "%A")
 
