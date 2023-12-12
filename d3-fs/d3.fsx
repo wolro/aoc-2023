@@ -36,24 +36,15 @@ let findNumCoord (inputStr: string) (num: string) =
 
     let idcs = findIndices [] 0
 
+    let isSurroundedByDigit (idx: int) =
+        let isDigitAt i = System.Char.IsDigit inputStr.[i]
 
-    idcs
-    |> List.filter (fun idx ->
-        if idx = 0 then
-            if (System.Char.IsDigit inputStr[idx + num.Length]) then
-                false
-            else
-                true
-        else if (idx + num.Length) = inputStr.Length then
-            if (System.Char.IsDigit inputStr[idx - 1]) then
-                false
-            else
-                true
-        else
-            match (System.Char.IsDigit inputStr[idx - 1], System.Char.IsDigit inputStr[idx + num.Length]) with
-            | _, true -> false
-            | true, _ -> false
-            | false, false -> true)
+        match idx, idx + num.Length with
+        | 0, endIdx -> not (isDigitAt endIdx)
+        | startIdx, length when length = inputStr.Length -> not (isDigitAt (startIdx - 1))
+        | startIdx, endIdx -> not (isDigitAt (startIdx - 1) || isDigitAt endIdx)
+
+    idcs |> List.filter isSurroundedByDigit
 
 let retrieveNums (inputLine: int * string) =
     let lineIdx, inputStr = inputLine
@@ -65,6 +56,9 @@ let retrieveNums (inputLine: int * string) =
         |> Seq.map (filterNumbers)
         |> Seq.filter (fun ele -> not (System.String.IsNullOrEmpty ele))
 
+    // Note: the following line creates multiple entries for the same number
+    // and position if the same number occus multiple times per line. We will
+    // get rid of these double entries later.
     let idcs = nums |> Seq.map (findNumCoord inputStr)
 
     let lineIdcs = Seq.init (Seq.length idcs) (fun _ -> lineIdx)
@@ -134,7 +128,7 @@ let p1Result (schematicRaw: seq<string>) =
         |> Seq.mapi (fun idcs ele -> retrieveNums (idcs, ele) |> Seq.map (buildPartNum))
         |> Seq.collect id
         |> Seq.collect id
-        |> Seq.distinct
+        |> Seq.distinct // This gets rid of the double entries mentioned in "retrieveNums"
 
     let isValidPartNum = partNums |> Seq.map (symNeighbour (symMask schematicRaw))
 
