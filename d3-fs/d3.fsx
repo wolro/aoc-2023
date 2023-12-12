@@ -36,10 +36,19 @@ let findNumCoord (inputStr: string) (num: string) =
 
     let idcs = findIndices [] 0
 
+
     idcs
     |> List.filter (fun idx ->
         if idx = 0 then
-            System.Char.IsDigit inputStr[idx + num.Length]
+            if (System.Char.IsDigit inputStr[idx + num.Length]) then
+                false
+            else
+                true
+        else if (idx + num.Length) = inputStr.Length then
+            if (System.Char.IsDigit inputStr[idx - 1]) then
+                false
+            else
+                true
         else
             match (System.Char.IsDigit inputStr[idx - 1], System.Char.IsDigit inputStr[idx + num.Length]) with
             | _, true -> false
@@ -72,7 +81,6 @@ let buildPartNum (numEntry: int * list<int> * string) =
           x = idx
           y = lineNr })
     |> Seq.ofList
-
 
 // ------------------------------------- Solution, part 1
 
@@ -112,16 +120,6 @@ let symNeighbour (symbols: bool[,]) (partCandidate: partNum) =
             checkedCoords
             |> List.filter (fun ele -> (ele.[0] >= 0 && ele.[0] < lenY && ele.[1] >= 0 && ele.[1] < lenX))
 
-        if partCandidate.value = "98" then
-            // checkedCoords |> Seq.iter (printfn "%A")
-            // printfn ""
-            printfn "%A" partCandidate
-            relevantCoords |> Seq.iter (printfn "%A")
-            printfn ""
-
-        // printfn "%A" checkedCoords
-        // printfn "%A" relevantCoords
-
         relevantCoords
         |> List.map (fun ele -> symbols.[ele.[0], ele.[1]])
         |> List.fold (||) false)
@@ -136,6 +134,7 @@ let p1Result (schematicRaw: seq<string>) =
         |> Seq.mapi (fun idcs ele -> retrieveNums (idcs, ele) |> Seq.map (buildPartNum))
         |> Seq.collect id
         |> Seq.collect id
+        |> Seq.distinct
 
     let isValidPartNum = partNums |> Seq.map (symNeighbour (symMask schematicRaw))
 
@@ -156,13 +155,16 @@ let input = @".\input.txt"
 // printfn "Sum of valid part numbers (External test input): %A" (readInput inputTestExt |> p1Result)
 printfn "Sum of valid part numbers (Input): %A" (readInput input |> p1Result)
 
-
-let schematicRaw = readInput input
+// ----------------------------- debug
+// let schematicRaw = readInput input
 
 // let partNums =
 //     schematicRaw
 //     |> Seq.mapi (fun idcs ele -> retrieveNums (idcs, ele) |> Seq.map (buildPartNum))
 //     |> Seq.collect id
+//     |> Seq.collect id
+//     |> Seq.distinct
+
 
 
 // // partNums |> Seq.iter (printfn "%A")
@@ -185,6 +187,9 @@ let schematicRaw = readInput input
 // |> wr.Write
 
 // wr.Close()
+
+
+// ----------------------------- debug
 
 // isValidPartNum |> Seq.iter (printfn "%A")
 
