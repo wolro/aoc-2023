@@ -68,7 +68,7 @@ let updateCardNumbers (card: Card) (cardNumbers: IDictionary<int, int>) =
     |> Seq.iter (fun ele ->
         let startId = ele + card.id
 
-        if startId <= 6 then
+        if startId <= cardNumbers.Count then
             (cardNumbers[startId] <- cardNumbers[startId] + 1))
 
 let p2Result (cardStrs: seq<string>) =
