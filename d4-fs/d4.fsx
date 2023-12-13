@@ -60,6 +60,15 @@ let p1Result (cards: seq<string>) =
 
 // ------------------------------------- Solution, part 2
 
+// Outline (pseudocode)
+// let cardnumbers = map (1 -> 1, 2 -> 1; 3 -> 1; 4 -> 1; 5 -> 1; 6 -> 1)
+
+// Seq.item 0 cards |> (parseCard >> nrWinNum)
+//     cardnumbers 0+1..0+1+winNr += 1
+// Seq.item 1 cards |> (parseCard >> nrWinNum)*cardnumbers[1]
+//     cardnumbers 1+1...1+1+winNr += 1
+// ...
+
 // ------------------------------------- Main script
 
 let inputTest1 = @".\input_test1.txt"
@@ -69,4 +78,6 @@ printfn "Part 1 ---------------------------------------------------------- "
 printfn "Card pile worth in points (test input): %A" (readInput inputTest1 |> p1Result)
 printfn "Card pile worth in points (Input): %A" (readInput input |> p1Result)
 
-// printfn "\nPart 2---------------------------------------------------------- "
+printfn "\nPart 2---------------------------------------------------------- "
+
+let cards = readInput inputTest1
