@@ -8,7 +8,10 @@ open System.IO
 
 // ------------------------------------- Types
 
-
+type Card =
+    { id: int
+      winning: List<int>
+      draw: List<int> }
 
 // ------------------------------------- IO
 
@@ -23,16 +26,37 @@ let readInput path =
 // ------------------------------------- Helper functions
 let filterNumbers (entry: string) = String.filter System.Char.IsDigit entry
 
-let splitIdGames (str: string) =
-    match str.Split(':') with
-    | [| idStr; gStr |] ->
-        (idStr |> filterNumbers |> System.Int32.Parse), gStr.Split(';') |> Seq.map (fun sgStr -> sgStr.Split(','))
+// ------------------------------------- Input parsing
+let parseCard (str: string) =
+
+    let extractNumbers (inStr: string) =
+        inStr.Split(' ')
+        |> Seq.map (filterNumbers >> System.Int32.TryParse)
+        |> Seq.filter (fun ele -> fst ele)
+        |> Seq.map (fun ele -> snd ele)
+        |> List.ofSeq
+
+
+    match str.Split(':', '|') with
+    | [| idStr; winStr; drawStr |] ->
+        { Card.id = (idStr |> filterNumbers |> System.Int32.Parse)
+          winning = extractNumbers winStr
+          draw = extractNumbers drawStr }
     | _ -> failwith "Invalid game input string."
 
 
-// ------------------------------------- Parsing input into types
-
 // ------------------------------------- Solution, part 1
+let nrWinNum (card: Card) =
+    (Set.intersect (Set.ofList card.winning) (Set.ofList card.draw)).Count
+
+let calcPoints (nrCount: int) =
+    match nrCount with
+    | 0 -> int 0.0
+    | _ -> int (2.0 ** ((float nrCount) - 1.0))
+
+let p1Result (cards: seq<string>) =
+    cards |> Seq.map (parseCard >> nrWinNum >> calcPoints) |> Seq.sum
+
 
 // ------------------------------------- Solution, part 2
 
@@ -41,12 +65,8 @@ let splitIdGames (str: string) =
 let inputTest1 = @".\input_test1.txt"
 let input = @".\input.txt"
 
+printfn "Part 1 ---------------------------------------------------------- "
+printfn "Card pile worth in points (test input): %A" (readInput inputTest1 |> p1Result)
+printfn "Card pile worth in points (Input): %A" (readInput input |> p1Result)
 
-// printfn "Part 1 ---------------------------------------------------------- "
-// printfn "Possible games (test input):"
-// possibleGames dices games_test1 |> Seq.iter (printfn "%A")
-// printfn "\nSum of IDs for possible games (test input): %A" (possibleSum dices games_test1)
-// printfn "Sum of IDs for possible games (input): %A" (possibleSum dices games)
 // printfn "\nPart 2---------------------------------------------------------- "
-// printfn "\nDice power (test input): %A" (dicePower games_test1)
-// printfn "\nDice power (input): %A" (dicePower games)
