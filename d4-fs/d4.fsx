@@ -5,6 +5,7 @@
 // Author: Wolfgang Rohringer
 
 open System.IO
+open System.Collections.Generic
 
 // ------------------------------------- Types
 
@@ -80,4 +81,9 @@ printfn "Card pile worth in points (Input): %A" (readInput input |> p1Result)
 
 printfn "\nPart 2---------------------------------------------------------- "
 
-let cards = readInput inputTest1
+let cards = readInput inputTest1 |> Seq.map (parseCard)
+let cardNumbers =
+    cards |> Seq.map(fun ele -> ele.id)
+
+
+// let rec updateCardNumbers (card)
