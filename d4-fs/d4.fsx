@@ -11,8 +11,8 @@ open System.Collections.Generic
 
 type Card =
     { id: int
-      winning: List<int>
-      draw: List<int> }
+      winning: int list
+      draw: int list }
 
 // ------------------------------------- IO
 
@@ -61,14 +61,28 @@ let p1Result (cards: seq<string>) =
 
 // ------------------------------------- Solution, part 2
 
-// Outline (pseudocode)
-// let cardnumbers = map (1 -> 1, 2 -> 1; 3 -> 1; 4 -> 1; 5 -> 1; 6 -> 1)
+let updateCardNumbers (card: Card) (cardNumbers: IDictionary<int, int>) =
+    let wins = card |> nrWinNum
 
-// Seq.item 0 cards |> (parseCard >> nrWinNum)
-//     cardnumbers 0+1..0+1+winNr += 1
-// Seq.item 1 cards |> (parseCard >> nrWinNum)*cardnumbers[1]
-//     cardnumbers 1+1...1+1+winNr += 1
-// ...
+    seq { 1..wins }
+    |> Seq.iter (fun ele ->
+        let startId = ele + card.id
+
+        if startId <= 6 then
+            (cardNumbers[startId] <- cardNumbers[startId] + 1))
+
+let p2Result (cardStrs: seq<string>) =
+    let cards = cardStrs |> Seq.map (parseCard)
+
+    let cardNumbers: Dictionary<int, int> =
+        cards |> Seq.map (fun ele -> (ele.id, 1)) |> dict |> Dictionary
+
+    cards
+    |> Seq.iter (fun card ->
+        seq { 1 .. cardNumbers[card.id] }
+        |> Seq.iter (fun _ -> updateCardNumbers card cardNumbers))
+
+    cardNumbers |> Seq.map (fun ele -> ele.Value) |> Seq.sum
 
 // ------------------------------------- Main script
 
@@ -80,10 +94,5 @@ printfn "Card pile worth in points (test input): %A" (readInput inputTest1 |> p1
 printfn "Card pile worth in points (Input): %A" (readInput input |> p1Result)
 
 printfn "\nPart 2---------------------------------------------------------- "
-
-let cards = readInput inputTest1 |> Seq.map (parseCard)
-let cardNumbers =
-    cards |> Seq.map(fun ele -> ele.id)
-
-
-// let rec updateCardNumbers (card)
+printfn "Number of cards won (test input): %A" (readInput inputTest1 |> p2Result)
+printfn "Number of cards won (Input): %A" (readInput input |> p2Result)
