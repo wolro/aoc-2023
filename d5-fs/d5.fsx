@@ -24,6 +24,10 @@ let filterNumbers (entry: string) = String.filter System.Char.IsDigit entry
 // ------------------------------------- Input parsing
 
 // ------------------------------------- Solution, part 1
+// 1) check if seed is in any source range (hopefully only one or 0)
+// 2) map (just an offset)
+// 3) check down the chain and repeat
+// 4) repeat for all seeds
 
 // ------------------------------------- Solution, part 2
 
