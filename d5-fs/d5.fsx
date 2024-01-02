@@ -5,6 +5,7 @@
 // Author: Wolfgang Rohringer
 
 open System.IO
+open System.Collections.Generic
 
 // ------------------------------------- Types
 
@@ -21,6 +22,12 @@ let readInput path =
 // ------------------------------------- Helper functions
 let filterNumbers (entry: string) = String.filter System.Char.IsDigit entry
 
+let sliceSeq startIdx endIdx (seq: 'a seq) =
+    seq
+    |> Seq.skip startIdx
+    |> Seq.take (endIdx - startIdx + 1)
+
+
 // ------------------------------------- Input parsing
 
 // ------------------------------------- Solution, part 1
@@ -35,6 +42,52 @@ let filterNumbers (entry: string) = String.filter System.Char.IsDigit entry
 
 let inputTest1 = @".\input_test1.txt"
 let input = @".\input.txt"
+
+let inputLines = readInput inputTest1
+
+let mapTypes = [|"seed-to-soil";
+     "soil-to-fertilizer";
+     "fertilizer-to-water";
+     "water-to-light";
+     "light-to-temperature"; 
+     "temperature-to-humidity"; 
+     "humidity-to-location"|]
+
+let seeds =
+     (inputLines |> Seq.item 0).Split(' ') 
+     |> Seq.map (filterNumbers >> System.UInt32.TryParse)
+     |> Seq.filter (fun ele -> fst ele)
+     |> Seq.map (fun ele -> snd ele)
+     |> List.ofSeq
+
+let getBorderIdx (inputLines: seq<string>) (mapType: string) = 
+    inputLines 
+    |> Seq.findIndex (fun line -> line.Contains(mapType))
+
+let mapBorders =
+    Seq.ofArray mapTypes
+    |> Seq.map (fun mapType -> getBorderIdx inputLines mapType)
+    |> Array.ofSeq
+
+
+let mapDict:Dictionary<string, list<list<uint32>>> = 
+    let seedSoilmaps = 
+        sliceSeq (mapBorders[0]+1) (mapBorders[1]-2) inputLines
+        |> Seq.map (fun ele -> ele.Split(' ')
+                                |> Seq.map (System.UInt32.TryParse)
+                                |> Seq.filter (fun ele -> fst ele)
+                                |> Seq.map (fun ele -> snd ele)
+                                |> List.ofSeq)
+        |> List.ofSeq
+
+
+
+    seq {(mapTypes[0], seedSoilmaps)} |> dict |> Dictionary
+
+    
+
+printfn "%A" (mapDict["seed-to-soil"])
+
 
 // printfn "Part 1 ---------------------------------------------------------- "
 // printfn "Card pile worth in points (test input): %A" (readInput inputTest1 |> p1Result)
