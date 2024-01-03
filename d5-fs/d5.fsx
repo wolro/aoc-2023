@@ -23,13 +23,49 @@ let readInput path =
 let filterNumbers (entry: string) = String.filter System.Char.IsDigit entry
 
 let sliceSeq startIdx endIdx (seq: 'a seq) =
-    seq
-    |> Seq.skip startIdx
-    |> Seq.take (endIdx - startIdx + 1)
+    seq |> Seq.skip startIdx |> Seq.take (endIdx - startIdx + 1)
 
 
 // ------------------------------------- Input parsing
 
+let mapTypes =
+    [| "seed-to-soil"
+       "soil-to-fertilizer"
+       "fertilizer-to-water"
+       "water-to-light"
+       "light-to-temperature"
+       "temperature-to-humidity"
+       "humidity-to-location" |]
+
+let getBorderIdx (inputLines: seq<string>) (mapType: string) =
+    inputLines |> Seq.findIndex (fun line -> line.Contains(mapType))
+
+
+let parseInput (inputLines: seq<string>) : (list<uint32> * IDictionary<string, list<list<uint32>>>) =
+    let filterAndParse (line: string) =
+        line.Split(' ')
+        |> Seq.map (filterNumbers >> System.UInt32.TryParse)
+        |> Seq.filter fst
+        |> Seq.map snd
+        |> List.ofSeq
+
+    let mapDict =
+        mapTypes
+        |> Array.windowed 2
+        |> Array.map (fun ele ->
+            match ele with
+            | [| currentType; nextType |] ->
+                currentType,
+                sliceSeq (getBorderIdx inputLines currentType + 1) (getBorderIdx inputLines nextType - 2) inputLines
+                |> Seq.map filterAndParse
+                |> List.ofSeq
+            | _ -> failwith "Invalid array length in pattern match")
+
+        |> dict
+
+    let seeds = inputLines |> Seq.item 0 |> filterAndParse |> List.ofSeq
+
+    seeds, mapDict
 // ------------------------------------- Solution, part 1
 // 1) check if seed is in any source range (hopefully only one or 0)
 // 2) map (just an offset)
@@ -43,50 +79,24 @@ let sliceSeq startIdx endIdx (seq: 'a seq) =
 let inputTest1 = @".\input_test1.txt"
 let input = @".\input.txt"
 
-let inputLines = readInput inputTest1
+let (seeds, mapDict) = inputTest1 |> readInput |> parseInput
 
-let mapTypes = [|"seed-to-soil";
-     "soil-to-fertilizer";
-     "fertilizer-to-water";
-     "water-to-light";
-     "light-to-temperature"; 
-     "temperature-to-humidity"; 
-     "humidity-to-location"|]
+// printfn "%A" (mapDict["temperature-to-humidity"])
+let seedIdx = 2
+let checkIdx = 1
+let mapIdx = 0
 
-let seeds =
-     (inputLines |> Seq.item 0).Split(' ') 
-     |> Seq.map (filterNumbers >> System.UInt32.TryParse)
-     |> Seq.filter (fun ele -> fst ele)
-     |> Seq.map (fun ele -> snd ele)
-     |> List.ofSeq
+if
+    (seeds[seedIdx] >= (mapDict[mapTypes[mapIdx]]).[checkIdx][1])
+    && (seeds[seedIdx]
+        <= (mapDict[mapTypes[mapIdx]]).[checkIdx][1]
+           + (mapDict[mapTypes[mapIdx]]).[checkIdx][2])
+then
+    printfn
+        "%A"
+        (seeds[seedIdx] + (mapDict[mapTypes[mapIdx]]).[checkIdx][0]
+         - (mapDict[mapTypes[mapIdx]]).[checkIdx][1])
 
-let getBorderIdx (inputLines: seq<string>) (mapType: string) = 
-    inputLines 
-    |> Seq.findIndex (fun line -> line.Contains(mapType))
-
-let mapBorders =
-    Seq.ofArray mapTypes
-    |> Seq.map (fun mapType -> getBorderIdx inputLines mapType)
-    |> Array.ofSeq
-
-
-let mapDict:Dictionary<string, list<list<uint32>>> = 
-    let seedSoilmaps = 
-        sliceSeq (mapBorders[0]+1) (mapBorders[1]-2) inputLines
-        |> Seq.map (fun ele -> ele.Split(' ')
-                                |> Seq.map (System.UInt32.TryParse)
-                                |> Seq.filter (fun ele -> fst ele)
-                                |> Seq.map (fun ele -> snd ele)
-                                |> List.ofSeq)
-        |> List.ofSeq
-
-
-
-    seq {(mapTypes[0], seedSoilmaps)} |> dict |> Dictionary
-
-    
-
-printfn "%A" (mapDict["seed-to-soil"])
 
 
 // printfn "Part 1 ---------------------------------------------------------- "
