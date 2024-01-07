@@ -40,7 +40,21 @@ let cardValues =
           ('K', 13)
           ('A', 14) ]
 
-
+let cardValuesP2 =
+    Map
+        [ ('J', 1)
+          ('2', 2)
+          ('3', 3)
+          ('4', 4)
+          ('5', 5)
+          ('6', 6)
+          ('7', 7)
+          ('8', 8)
+          ('9', 9)
+          ('T', 10)
+          ('Q', 11)
+          ('K', 12)
+          ('A', 13) ]
 // ------------------------------------- IO
 
 let readInput path =
@@ -53,19 +67,8 @@ let readInput path =
 
 
 // ------------------------------------- Helper functions
-
-
-// ------------------------------------- Input parsing
-
-let cardOccurrences (input: string) =
-    input
-    |> Seq.groupBy id
-    |> Seq.map (fun (char, occurrences) -> char, Seq.length occurrences)
-    |> List.ofSeq
-    |> List.map snd
-
-let identifyHand (cards: string) : HandValues =
-    match (cardOccurrences cards) with
+let identifyHand (countFcn) (cards: string) : HandValues =
+    match (countFcn cards) with
     | [ 5 ] -> HandValues.five
     | [ 4; 1 ]
     | [ 1; 4 ] -> HandValues.four
@@ -84,19 +87,29 @@ let identifyHand (cards: string) : HandValues =
     | [ 1; 1; 1; 1; 1 ] -> HandValues.single
     | _ -> failwith ("Invalid card pattern?")
 
+let cardOccurrences (input: string) =
+    input
+    |> Seq.groupBy id
+    |> Seq.map (fun (char, occurrences) -> char, Seq.length occurrences)
+    |> List.ofSeq
+    |> List.map snd
+
+// ------------------------------------- Input parsing
+
 ///<summary> Parse line into "Hand". Some steps towards solution of part 1
 /// are already covered here by identifying the type of hand, and storing
 /// a list representing the value of each card, used for sorting. </summary>
-let parseHand (instr: string) : Hand =
+let parseHand idFcn (instr: string) : Hand =
     let splitStr = instr.Split(' ')
 
     { Hand.cards = splitStr[0]
       bid = System.Int32.Parse splitStr[1]
-      handType = identifyHand splitStr[0]
+      handType = idFcn splitStr[0]
       cardValues = splitStr[0] |> Seq.map (fun ele -> cardValues[ele]) |> List.ofSeq }
 
 
 // ------------------------------------- Solution, part 1
+
 /// <summary> Used to filter for a specific hand type (such as "fullHouse")
 /// by the underlying integer enum value, which can be generated rom a range,
 /// so that this can be done in an iteration. Seems hacky to me, but I didn't
@@ -119,7 +132,7 @@ let compareCards cards1 cards2 =
     cmpCard cvs1 cvs2 0
 
 let p1Result (input: string seq) =
-    let hands = input |> Seq.map (parseHand)
+    let hands = input |> Seq.map (parseHand (identifyHand cardOccurrences))
     let hTypes = seq { 1..7 } |> Seq.cast<HandValues>
 
     hTypes
@@ -132,6 +145,41 @@ let p1Result (input: string seq) =
 
 // ------------------------------------- Solution, part 2
 
+let replaceJokers (cards: string) =
+
+    let groups =
+        cards
+        |> Seq.groupBy id
+        |> Seq.map (fun (char, occurrences) -> char, Seq.length occurrences)
+
+    let jokers = groups |> Seq.filter (fun ele -> fst ele = 'J')
+
+    let jCards =
+        if not (Seq.isEmpty jokers) then
+            if snd (Seq.item 0 jokers) = 5 then
+                cards
+            else
+                let maxCard = groups |> Seq.filter (fun ele -> fst ele <> 'J') |> Seq.maxBy snd
+                cards.Replace('J', fst maxCard)
+        else
+            cards
+
+    printfn "%A" jCards
+    jCards
+
+let p2Result (input: string seq) =
+    let hands =
+        input |> Seq.map (parseHand (identifyHand (replaceJokers >> cardOccurrences)))
+
+    let hTypes = seq { 1..7 } |> Seq.cast<HandValues>
+
+    hTypes
+    |> Seq.map (filterHandType hands) // returns Hands grouped by hand type in ascending order in separate seqs
+    |> Seq.map (Seq.sortWith compareCards) // sort each seq according to cards
+    |> Seq.collect id // flatten (hand seq seq -> hand seq)
+    |> Seq.mapi (fun i e -> uint32 (e.bid * (i + 1))) // calculate score for each hand
+    |> Seq.reduce (+) // total score
+
 
 // ------------------------------------- Main script
 
@@ -143,15 +191,16 @@ printfn "Score (test input): %A" (readInput inputTest1 |> p1Result)
 printfn "Score - multiply number of winning strategies (Input): %A\n" (readInput input |> p1Result)
 
 
-
-
-// printfn "Part 2 ---------------------------------------------------------- "
-// printfn "Score - multiply number of winning strategies (test input): %A" (readInput inputTest1 |> p2Result)
-// printfn "Score - multiply number of winning strategies (Input): %A" (readInput input |> p2Result)
+printfn "Part 2 ---------------------------------------------------------- "
+printfn "Score with Jokers (test input): %A" (readInput inputTest1 |> p2Result)
+printfn "Score with Jokers (Input): %A" (readInput input |> p2Result)
 
 
 // " dbg ---------------------------------------------------------- "
-// let hands = readInput input |> Seq.map (parseHand)
+// let hands = readInput inputTest1 |> Seq.map (parseHand (identifyHand id))
+
+// let hand = Seq.item 4 hands
+
 // let hTypes = seq { 1..7 } |> Seq.cast<HandValues>
 
 // let lol = hTypes |> Seq.map (filterHandType hands) // returns Hands grouped by hand type in ascending order in separate seqs
